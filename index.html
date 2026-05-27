@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -574,6 +575,7 @@
     </div>
     <div class="top-controls">
       <button class="icon-btn" id="voiceBtn" onclick="toggleVoice()">VOICE OFF</button>
+      <span id="voiceLabel" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
       <button class="icon-btn" onclick="resetGuest()">RESET</button>
       <button class="icon-btn" id="backupBtn" onclick="toggleBackup()">LIVE</button>
     </div>
@@ -1053,25 +1055,64 @@ function hideThinking() {
 }
 
 // ============================================================
-// VOICE (browser Web Speech API)
+// VOICE (browser Web Speech API) — LEX uses a male voice
 // ============================================================
 let preferredVoice = null;
 function loadVoices() {
   const voices = speechSynthesis.getVoices();
-  // Try to find a warm, natural English voice for LEX
-  // Priority: Google US English > Microsoft Aria > any en-US > any English
+  if (!voices.length) return;
+
+  // Priority list for LEX — natural-sounding male English voices first.
+  // Each entry is a function that picks a voice from the list.
+  // Order matters: best-quality voices are tried first.
   const preferences = [
-    v => v.name.includes('Google') && v.lang.startsWith('en'),
-    v => v.name.includes('Aria') || v.name.includes('Jenny'),
-    v => v.name.includes('Samantha'), // Mac default, quite natural
+    // Tier 1 — Premium natural male voices (Windows 11 high-quality neural)
+    v => /Microsoft Guy/i.test(v.name),         // Win 11 — excellent, very natural
+    v => /Microsoft Davis/i.test(v.name),       // Win 11 — warm American male
+    v => /Microsoft Tony/i.test(v.name),        // Win 11 — clear American male
+    v => /Microsoft Ryan/i.test(v.name),        // Win 11 — British male, excellent
+    v => /Microsoft Brian/i.test(v.name),       // Win 11 — friendly American male
+    v => /Microsoft Andrew/i.test(v.name),      // Win 11 — confident American male
+
+    // Tier 2 — Google Chrome neural voices (cross-platform if Chrome is installed)
+    v => /Google.*UK English Male/i.test(v.name),
+    v => /Google.*US English/i.test(v.name) && /male/i.test(v.name),
+
+    // Tier 3 — Mac built-in male voices (in case she's on a Mac)
+    v => /^Alex$/i.test(v.name),                // Mac — excellent American male
+    v => /^Daniel/i.test(v.name),               // Mac — British male
+    v => /^Tom$/i.test(v.name),                 // Mac — American male
+
+    // Tier 4 — Older Windows male voices (functional but more robotic)
+    v => /Microsoft David/i.test(v.name),       // Win 10 default American male
+    v => /Microsoft Mark/i.test(v.name),        // Win 10 American male
+    v => /Microsoft George/i.test(v.name),      // Win 10 British male
+    v => /Microsoft James/i.test(v.name),       // Win 10 Australian male
+
+    // Tier 5 — Last-resort heuristic: any English voice whose name suggests male
+    v => v.lang.startsWith('en') && /\b(male|man|guy|david|mark|tom|alex|daniel|brian|ryan|andrew|james|george|tony|guy|davis|paul|matthew|joe|john|adam|aaron)\b/i.test(v.name),
+
+    // Tier 6 — Final fallback: any en-US voice (may be female)
     v => v.lang === 'en-US',
     v => v.lang.startsWith('en')
   ];
+
   for (const pref of preferences) {
     const found = voices.find(pref);
-    if (found) { preferredVoice = found; return; }
+    if (found) {
+      preferredVoice = found;
+      updateVoiceLabel(found.name);
+      return;
+    }
   }
 }
+
+function updateVoiceLabel(name) {
+  // Show the currently selected voice next to the VOICE button (helpful for rehearsal)
+  const lbl = document.getElementById('voiceLabel');
+  if (lbl) lbl.textContent = name ? `· ${name}` : '';
+}
+
 if (typeof speechSynthesis !== 'undefined') {
   speechSynthesis.onvoiceschanged = loadVoices;
   loadVoices();
@@ -1083,7 +1124,7 @@ function speakText(text, guestId) {
   const utterance = new SpeechSynthesisUtterance(text);
   if (preferredVoice) utterance.voice = preferredVoice;
   utterance.rate = 0.95;
-  utterance.pitch = 1.0;
+  utterance.pitch = 0.92;  // Slightly lower than neutral — grounds the voice, more masculine
   utterance.volume = 1.0;
   speechSynthesis.speak(utterance);
 }
