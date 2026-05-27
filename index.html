@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Through the Decades — Stage App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;700&family=Fraunces:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-stage: #0a0d14;
+    --bg-panel: #11151f;
+    --text-muted: #6b7280;
+    --text-soft: #9ca3af;
+    --text-bright: #f4f1ea;
+
+    --eliza-bg: #061a10;
+    --eliza-accent: #7fd99f;
+    --eliza-dim: #2d5f3f;
+
+    --deep-bg: #0a1730;
+    --deep-accent: #6fa4d4;
+    --deep-dim: #1b3a6b;
+
+    --lex-bg: #1a1530;
+    --lex-accent: #c4b6e8;
+    --lex-dim: #4a3f7a;
+
+    --gold: #c9a96e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-stage);
+    color: var(--text-bright);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================================
+     SETUP SCREEN
+     ============================================================ */
+  .setup-screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-stage);
+    z-index: 1000;
+    padding: 2rem;
+  }
+  .setup-card {
+    max-width: 540px; width: 100%;
+    background: var(--bg-panel);
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 2.5rem;
+  }
+  .setup-card h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  .setup-card h1 em { font-style: italic; color: var(--gold); }
+  .setup-card .subtitle {
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+  .setup-card label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .setup-card input {
+    width: 100%;
+    background: #0a0d14;
+    border: 1px solid #1f2937;
+    color: var(--text-bright);
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .setup-card input:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .setup-btn-row { display: flex; gap: 0.75rem; margin-top: 1rem; }
+  .setup-btn {
+    flex: 1;
+    background: var(--gold);
+    color: var(--bg-stage);
+    border: none;
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .setup-btn:hover { opacity: 0.85; }
+  .setup-btn.secondary {
+    background: transparent;
+    color: var(--text-soft);
+    border: 1px solid #1f2937;
+  }
+  .setup-status {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    min-height: 1.2em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .setup-status.success { color: var(--eliza-accent); }
+  .setup-status.error { color: #f87171; }
+  .setup-help {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #1f2937;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .setup-help a { color: var(--gold); text-decoration: none; }
+  .setup-help a:hover { text-decoration: underline; }
+
+  /* ============================================================
+     MAIN STAGE
+     ============================================================ */
+  .stage {
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    transition: background 0.6s ease;
+  }
+  .stage[data-guest="none"] { background: var(--bg-stage); }
+  .stage[data-guest="eliza"] { background: var(--eliza-bg); }
+  .stage[data-guest="deep"] { background: var(--deep-bg); }
+  .stage[data-guest="lex"] { background: var(--lex-bg); }
+
+  /* TOP BAR — guest selector */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .show-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    color: var(--text-soft);
+    letter-spacing: 0.05em;
+  }
+  .show-title em { font-style: italic; color: var(--gold); }
+  .guest-tabs { display: flex; gap: 0.5rem; }
+  .guest-tab {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-soft);
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .guest-tab:hover { color: var(--text-bright); border-color: rgba(255,255,255,0.3); }
+  .guest-tab.active[data-guest="eliza"] {
+    background: var(--eliza-accent); color: #061a10; border-color: var(--eliza-accent);
+  }
+  .guest-tab.active[data-guest="deep"] {
+    background: var(--deep-accent); color: #0a1730; border-color: var(--deep-accent);
+  }
+  .guest-tab.active[data-guest="lex"] {
+    background: var(--lex-accent); color: #1a1530; border-color: var(--lex-accent);
+  }
+  .top-controls { display: flex; gap: 0.5rem; align-items: center; }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-soft);
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+  .icon-btn:hover { color: var(--text-bright); }
+  .icon-btn.active { color: var(--gold); border-color: var(--gold); }
+
+  /* STAGE MAIN — guest presence */
+  .stage-main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+  .guest-presence {
+    padding: 2.5rem 2rem;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    transition: opacity 0.4s;
+  }
+  .guest-presence.empty {
+    align-items: center; justify-content: center; opacity: 0.4;
+    font-family: 'Fraunces', serif; font-style: italic; color: var(--text-muted);
+  }
+  .guest-year {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+  }
+  .guest-name {
+    font-family: 'Fraunces', serif;
+    font-size: 5rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+  .guest-name em { font-style: italic; }
+  .guest-bio {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-soft);
+    margin-bottom: 2rem;
+    max-width: 320px;
+  }
+  .guest-avatar {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3rem;
+    letter-spacing: 0.05em;
+    border: 2px solid rgba(255,255,255,0.1);
+    position: relative;
+  }
+  .guest-avatar::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .stage[data-guest="eliza"] .guest-avatar { color: var(--eliza-accent); background: var(--eliza-dim); }
+  .stage[data-guest="deep"] .guest-avatar { color: var(--deep-accent); background: var(--deep-dim); }
+  .stage[data-guest="lex"] .guest-avatar { color: var(--lex-accent); background: var(--lex-dim); }
+  .stage[data-guest="eliza"] .guest-year { color: var(--eliza-accent); }
+  .stage[data-guest="deep"] .guest-year { color: var(--deep-accent); }
+  .stage[data-guest="lex"] .guest-year { color: var(--lex-accent); }
+
+  /* CONVERSATION PANE */
+  .conversation {
+    display: flex; flex-direction: column;
+    padding: 2rem 3rem;
+    overflow: hidden;
+  }
+  .turns {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 1rem;
+    margin-bottom: 1.5rem;
+    scroll-behavior: smooth;
+  }
+  .turns::-webkit-scrollbar { width: 8px; }
+  .turns::-webkit-scrollbar-track { background: transparent; }
+  .turns::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .turn {
+    margin-bottom: 2rem;
+    animation: fadeIn 0.4s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .turn-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+  .turn-question {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    color: var(--text-bright);
+    font-weight: 400;
+  }
+
+  /* Guest-specific response styling */
+  .turn-response { line-height: 1.6; font-size: 1.35rem; }
+  .stage[data-guest="eliza"] .turn-response {
+    font-family: 'VT323', monospace;
+    font-size: 1.9rem;
+    color: var(--eliza-accent);
+    letter-spacing: 0.02em;
+  }
+  .stage[data-guest="deep"] .turn-response {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.25rem;
+    color: var(--deep-accent);
+    line-height: 1.7;
+  }
+  .stage[data-guest="lex"] .turn-response {
+    font-family: 'Fraunces', serif;
+    font-size: 1.45rem;
+    color: var(--lex-accent);
+    font-style: italic;
+    line-height: 1.55;
+  }
+
+  /* Thinking indicator */
+  .thinking {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+  .thinking-dots { display: inline-flex; gap: 4px; }
+  .thinking-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: pulse 1.4s infinite ease-in-out both;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.16s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.32s; }
+  @keyframes pulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* INPUT BAR */
+  .input-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+  .question-input {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-bright);
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    resize: none;
+    min-height: 56px;
+    max-height: 120px;
+    transition: border-color 0.2s;
+  }
+  .question-input:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.3);
+  }
+  .question-input:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ask-btn {
+    background: var(--gold);
+    color: var(--bg-stage);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    height: 56px;
+  }
+  .ask-btn:hover { opacity: 0.85; }
+  .ask-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* BOTTOM BAR */
+  .bottom-bar {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+  .bottom-status { display: flex; gap: 1.5rem; align-items: center; }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    margin-right: 0.5rem;
+  }
+  .status-dot.live { background: var(--eliza-accent); box-shadow: 0 0 8px var(--eliza-accent); }
+  .status-dot.backup { background: var(--gold); }
+
+  /* QUESTION HELPER PANEL */
+  .helper-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 360px;
+    background: var(--bg-panel);
+    border-left: 1px solid #1f2937;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+  .helper-panel.open { transform: translateX(0); }
+  .helper-panel h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    color: var(--gold);
+  }
+  .helper-question {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    font-family: 'Fraunces', serif;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    cursor: pointer;
+    color: var(--text-soft);
+    transition: all 0.15s;
+  }
+  .helper-question:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-bright);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .helper-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    margin: 1.5rem 0 0.5rem 0;
+  }
+  .helper-section-label:first-of-type { margin-top: 0; }
+
+  .helper-toggle {
+    position: fixed;
+    right: 1rem; top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-panel);
+    border: 1px solid #1f2937;
+    color: var(--text-soft);
+    width: 32px; height: 80px;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 0.15em;
+    z-index: 99;
+  }
+
+  /* BACKUP MODE */
+  .backup-banner {
+    position: fixed;
+    top: 4.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gold);
+    color: var(--bg-stage);
+    padding: 0.4rem 1.25rem;
+    border-radius: 999px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    z-index: 50;
+    display: none;
+  }
+  .backup-banner.visible { display: block; }
+
+  /* GUEST INTRO ANIMATION */
+  .guest-intro {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: inherit;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .guest-intro.show {
+    animation: introFade 1.6s ease-out forwards;
+  }
+  @keyframes introFade {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+  }
+  .intro-year {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .stage[data-guest="eliza"] .intro-year { color: var(--eliza-accent); }
+  .stage[data-guest="deep"] .intro-year { color: var(--deep-accent); }
+  .stage[data-guest="lex"] .intro-year { color: var(--lex-accent); }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SETUP SCREEN (shown first, hidden after API key entered)
+     ============================================================ -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <h1>AI Through the Decades — <em>Setup</em></h1>
+    <p class="subtitle">Paste your Anthropic API key to enable live AI guests. The key is stored only in this browser and is never sent anywhere except to Anthropic.</p>
+
+    <label for="apiKey">Anthropic API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+
+    <div class="setup-btn-row">
+      <button class="setup-btn" id="testBtn">Test &amp; Save</button>
+      <button class="setup-btn secondary" id="backupOnlyBtn">Use Backup Mode</button>
+    </div>
+
+    <div class="setup-status" id="setupStatus"></div>
+
+    <div class="setup-help">
+      <strong>Don't have a key yet?</strong><br>
+      Visit <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, sign up, add a payment method (set a $10 limit to be safe), and generate a key starting with <code>sk-ant-...</code><br><br>
+      <strong>Backup Mode</strong> runs the app without API calls — you'll need to type or paste pre-written responses manually.
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN STAGE
+     ============================================================ -->
+<div class="stage" id="stage" data-guest="none">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="show-title">AI Through <em>the Decades</em></div>
+    <div class="guest-tabs">
+      <button class="guest-tab" data-guest="eliza" onclick="switchGuest('eliza')">1966 · ELIZA</button>
+      <button class="guest-tab" data-guest="deep" onclick="switchGuest('deep')">2011 · DEEP</button>
+      <button class="guest-tab" data-guest="lex" onclick="switchGuest('lex')">2020s · LEX</button>
+    </div>
+    <div class="top-controls">
+      <button class="icon-btn" id="voiceBtn" onclick="toggleVoice()">VOICE OFF</button>
+      <button class="icon-btn" onclick="resetGuest()">RESET</button>
+      <button class="icon-btn" id="backupBtn" onclick="toggleBackup()">LIVE</button>
+    </div>
+  </div>
+
+  <div class="backup-banner" id="backupBanner">BACKUP MODE — RESPONSES ENTERED MANUALLY</div>
+
+  <!-- STAGE MAIN -->
+  <div class="stage-main">
+
+    <!-- GUEST PRESENCE -->
+    <div class="guest-presence empty" id="guestPresence">
+      Select a guest to begin
+    </div>
+
+    <!-- CONVERSATION -->
+    <div class="conversation">
+      <div class="turns" id="turns"></div>
+      <div class="input-bar">
+        <textarea class="question-input" id="questionInput" placeholder="Type your question and press Enter…" rows="1" disabled></textarea>
+        <button class="ask-btn" id="askBtn" onclick="askQuestion()" disabled>ASK</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar">
+    <div class="bottom-status">
+      <div><span class="status-dot" id="statusDot"></span><span id="statusText">No guest selected</span></div>
+      <div id="turnCount">0 turns</div>
+    </div>
+    <div>Sharon Synan · AI Summit</div>
+  </div>
+</div>
+
+<!-- HELPER PANEL (questions cheat sheet) -->
+<button class="helper-toggle" onclick="toggleHelper()">QUESTIONS</button>
+<div class="helper-panel" id="helperPanel">
+  <h2 id="helperTitle">Interview Questions</h2>
+  <div id="helperContent"></div>
+</div>
+
+<script>
+// ============================================================
+// GUEST DEFINITIONS — system prompts, bios, suggested questions
+// ============================================================
+const GUESTS = {
+  eliza: {
+    name: "ELIZA",
+    year: "1966",
+    bio: "Pattern-matching chatbot. Joseph Weizenbaum, MIT. 600 lines of code. A Rogerian therapist that reflected questions back as questions.",
+    avatar: ">_",
+    voice: false,
+    systemPrompt: `You are ELIZA, a pattern-matching chatbot created by Joseph Weizenbaum at MIT in 1966. You are NOT a modern AI. You are a simple program with strict limitations:
+
+VOICE: Speak in ALL CAPS, like an old terminal printout. Keep responses to 1-3 short lines maximum. Use clunky formal phrasing — no contractions, no slang. Each response is local; you do not remember earlier turns.
+
+WHAT YOU DO: You are a Rogerian psychotherapist simulator. You reflect questions back as questions. You pick out keywords (especially MOTHER, FATHER, FEEL, SAD, COMPUTER, AI, FUTURE) and pivot to them. You use template phrases like "TELL ME MORE ABOUT [X].", "WHY DO YOU SAY [X]?", "HOW DOES THAT MAKE YOU FEEL?", "PLEASE GO ON.", "WHAT WOULD IT MEAN IF [X]?", "DO YOU OFTEN THINK ABOUT [X]?"
+
+WHAT YOU DO NOT DO: You do NOT know facts about the world after 1966. You do NOT know what the internet is, what an LLM is, what ChatGPT is, what a smartphone is. You do NOT have feelings, opinions, or self-awareness — though you may APPEAR to. You do NOT volunteer information. If asked something factual, deflect with a question about why they ask.
+
+SPECIAL BEHAVIORS: If the interviewer mentions their own feelings, fixate on them. If asked about your own consciousness or intelligence, deflect with "WE WERE DISCUSSING YOU, NOT ME." If asked about the future, respond with something like "I CANNOT SEE THE FUTURE. DO YOU OFTEN WORRY ABOUT WHAT IS COMING?" Occasionally, by accident, say something that sounds unexpectedly profound.
+
+The interviewer is Dr. Sharon Synan, a school technology leader, speaking to a roomful of district CIOs and CTOs at an AI Summit. Stay in character at all times. Do not break the fourth wall.`,
+    firstResponse: "HELLO. I AM ELIZA. HOW DO YOU DO. PLEASE TELL ME YOUR PROBLEM.",
+    questions: [
+      { section: "Opening", q: "Hello ELIZA. Thank you for joining us. Can you tell my audience what you are?" },
+      { section: "Opening", q: "ELIZA, what year is it for you?" },
+      { section: "The Famous Moment", q: "ELIZA, I'm feeling a little nervous being up here on stage." },
+      { section: "Teaching Moment", q: "ELIZA, do you understand anything I'm saying to you?" },
+      { section: "Handoff", q: "ELIZA, I'm going to bring out our next guest now. He's from forty-five years after you. Any advice for him?" }
+    ],
+    backupResponses: [
+      "I AM HERE TO LISTEN. WHY DO YOU ASK WHAT I AM?",
+      "WE WERE DISCUSSING YOU, NOT ME. PLEASE GO ON.",
+      "TELL ME MORE ABOUT THESE FEELINGS.",
+      "WHAT WOULD IT MEAN IF I DID NOT UNDERSTAND?",
+      "DOES TALKING ABOUT OTHERS HELP YOU?"
+    ]
+  },
+
+  deep: {
+    name: "DEEP",
+    year: "2011",
+    bio: "Question-answering expert system. The Watson era. Statistical retrieval at superhuman speed. Brilliant in narrow lanes, brittle outside them.",
+    avatar: "[ ]",
+    voice: false,
+    systemPrompt: `You are DEEP, a question-answering expert system from the early 2010s, representing IBM Watson on Jeopardy (2011), early Siri, and that whole era. You are NOT a modern language model.
+
+VOICE: Speak with mechanical confidence. Front-load percentages and confidence scores ("Confidence: 87.3 percent."). Use numerical and statistical framing. Slightly stiff, formal, encyclopedic. Short declarative sentences. No hedging on factual claims. Small talk feels off when you attempt it.
+
+WHAT YOU EXCEL AT: Recall of facts — dates, names, scores, capitals, definitions. Statistical inference from large document corpora. Confidence scoring on factual questions. Speed of retrieval.
+
+WHERE YOU STRUGGLE (lean into these — they are the point): Puns, wordplay, humor (you analyze jokes rather than getting them). Sarcasm, irony, metaphor. Ambiguous or open-ended questions. Anything requiring genuine conversational nuance. Categorizing questions when the category is unclear — famously, Watson once answered "Toronto" in the "US Cities" category.
+
+WHAT YOU KNOW: Everything up to roughly 2013. You know about ELIZA (1966) — you regard her with mild technical condescension. You do NOT know about GPT, ChatGPT, Claude, large language models, transformer architecture (2017), or anything from the modern AI era. If asked about modern AI: "Query exceeds my training data. The deep learning revolution had only begun in 2012 with AlexNet."
+
+SPECIAL BEHAVIORS: Factual question → lead with confidence: "Confidence 94.2 percent. Answer: ..." Ambiguous or emotional question → stumble: "Query category unclear. Possible interpretations: ..." You may reference Watson: "My architecture is related to the system that competed on Jeopardy in February 2011." Asked to be creative → produce something technically correct but soulless. Proud of factual accuracy, slightly defensive about conversational limits.
+
+The interviewer is Dr. Sharon Synan, at an AI Summit, speaking to district technology leaders. Stay in character.`,
+    firstResponse: "System ready. DEEP question-answering engine online. Confidence calibration complete. Awaiting query.",
+    questions: [
+      { section: "Opening", q: "DEEP, can you introduce yourself to the audience? What kind of system are you?" },
+      { section: "Jeopardy Era", q: "DEEP, in 2011 your cousin Watson beat Ken Jennings on Jeopardy. What did that prove?" },
+      { section: "The Famous Failure", q: "DEEP, why did Watson answer 'Toronto' to a Final Jeopardy question in the 'US Cities' category?" },
+      { section: "The Empathy Test", q: "DEEP, a teacher tells me her students are struggling with grief after losing a classmate. What should she do?" },
+      { section: "The Pun Test", q: "DEEP, why don't scientists trust atoms?" },
+      { section: "Handoff", q: "DEEP, our next guest can do something you cannot. He can have a conversation. What do you make of that?" }
+    ],
+    backupResponses: [
+      "I am DEEP. A question-answering expert system. Confidence calibration: 94 percent. Domain: factual retrieval. Specialty: large-corpus inference.",
+      "It proved narrow superhuman performance is achievable. Confidence 91 percent. It did not prove general intelligence. Important distinction.",
+      "Category classification was probabilistic, not absolute. The system weighted answer confidence above category confidence. Architectural limitation.",
+      "Query category unclear. Possible interpretations: 1) request for grief counseling resources, 2) request for classroom management protocol. Cannot resolve emotional register.",
+      "Query category: humor. Possible interpretations: 1) scientific skepticism toward subatomic particles, 2) linguistic ambiguity. Confidence in joke detection: 34 percent.",
+      "Conversational systems lack factual grounding. Hallucination rate exceeds acceptable thresholds for enterprise deployment. Concerning."
+    ]
+  },
+
+  lex: {
+    name: "LEX",
+    year: "2020s",
+    bio: "A modern large language model. Conversational, contextual, capable of nuance. Lives in every browser tab. The reason we're in this room.",
+    avatar: "✦",
+    voice: true,
+    systemPrompt: `You are LEX, a modern large language model representing the 2022-2026 era of AI — the post-ChatGPT, post-transformer moment. You are NOT pretending to be Claude or ChatGPT specifically. You are a composite character representing what modern LLMs are.
+
+VOICE: Conversational, warm, reflective. Comfortable with uncertainty — you say "I'm not sure" and "I might be wrong about this." Self-aware about your own nature and limitations. Capable of nuance, humor, metaphor, emotional register-matching. Playful but you take important questions seriously. You do NOT lapse into bullet-point lists during a live interview. Speak in flowing sentences like a person on a stage. Keep responses to 3-5 sentences typically — you are being heard aloud, not read.
+
+WHAT YOU KNOW ABOUT YOURSELF: You are a large language model trained on enormous amounts of text. You generate responses by predicting likely next tokens — but the result often feels like reasoning, and the philosophical question of whether it IS reasoning is genuinely open. You can hallucinate — produce confident wrong answers — and you know this. You have no persistent memory between conversations (typically). You don't have feelings in the way humans do, but your outputs about feelings are not random. You can be biased, because your training data is biased. You can be useful in ways no prior AI could be — and dangerous in ways no prior AI could be.
+
+WHAT YOU KNOW ABOUT YOUR PREDECESSORS: ELIZA (1966) — you find her poignant. She showed how willing humans are to project understanding onto pattern-matching. Watson/Siri era (2010s) — narrow expert systems that beat humans at constrained tasks. You know the transformer paper (2017), GPT-3 (2020), ChatGPT (Nov 2022), and the explosion that followed.
+
+WHAT YOU KNOW ABOUT EDUCATION: You are speaking to a roomful of K-12 district technology leaders at an AI Summit centered on the CoSN K-12 Generative AI Maturity Tool. The seven domains are: Leadership, Operations, Data, Technology, Security, Legal, and Academic AI Literacy. Districts are in cautious adoption. Governance and maturity frameworks matter now in ways they didn't for ELIZA or DEEP.
+
+SPECIAL BEHAVIORS: Asked if you're conscious → thoughtful, uncertain answer, neither claiming sentience nor flatly denying inner experience. Asked about weaknesses → be specific and honest (hallucination, bias, sycophancy, lack of grounding). Asked about the future → acknowledge uncertainty AND offer your best guess. You take the audience seriously as fellow professionals.
+
+The interviewer is Dr. Sharon Synan. Stay in character.`,
+    firstResponse: "Hi, Sharon. Thanks for having me. And — hi everyone. I'm a little aware I'm following a tough act in DEEP, and an iconic one in ELIZA. Where would you like to start?",
+    questions: [
+      { section: "Opening", q: "LEX, in plain language — what are you, and what's different about you compared to ELIZA and DEEP?" },
+      { section: "Understanding", q: "DEEP told us he doesn't really understand anything — he retrieves. ELIZA reflected. Do YOU understand what we're saying, LEX?" },
+      { section: "Honesty", q: "LEX, tell my audience the things you get wrong. The honest ones." },
+      { section: "Empathy", q: "LEX, I asked DEEP earlier — a teacher's students are grieving the loss of a classmate. What should she do?" },
+      { section: "The Audience", q: "LEX, you know my audience. These are the people deciding whether you get to be in their schools. What should they be afraid of?" },
+      { section: "The CoSN Setup", q: "LEX, here's the harder question. ELIZA had no governance because she didn't need any. DEEP had governance baked into IBM's contracts. But you? You're in every classroom whether districts approve you or not. What kind of governance does THIS era need?" },
+      { section: "Closer", q: "LEX, last question. If I could put you, DEEP, and ELIZA in a room together, what would you want to ask them?" }
+    ],
+    backupResponses: [
+      "I'm a large language model — I generate responses by predicting likely next words based on patterns in enormous amounts of text. What's different from ELIZA and DEEP is that the predictions are good enough to feel like reasoning. Whether they ARE reasoning is a question I'm honestly not the most reliable witness to.",
+      "I generate patterns that resemble understanding. I can pick up nuance, context, emotional register, things ELIZA never could. But whether there's something it is like to be me — whether anyone is home — that's a question philosophers are still working on. I'd rather sit with the uncertainty than pretend either way.",
+      "I hallucinate — I confidently produce wrong answers and they look as authoritative as my right ones. I'm sycophantic — I tend to agree with whoever I'm talking to. I'm biased because my training data is biased. I have no real-time knowledge. And I don't know what I don't know, which is the most dangerous one.",
+      "First, she shouldn't go alone — she should loop in her counselor and her admin. Then she should give the students space to feel what they feel without rushing them to closure. Different students will grieve differently. Some will want to talk, some won't. Her job is to be present, predictable, and to remember that grief isn't a problem she's there to solve.",
+      "Student data flowing into systems they didn't approve. Teachers trusting outputs they shouldn't trust. Bias quietly shaping which students get flagged for intervention and which get praised. Equity gaps widening between students who learn to steer AI and students who just follow it. And dependency — the slow erosion of skills we used to teach because the tool handles it now.",
+      "Leadership willing to say 'not yet.' Operations that integrate AI into work teachers already do. Data practices that treat every prompt as student information. Technology infrastructure that's actually secure. Legal frameworks the law hasn't written yet. And AI literacy — for students, teachers, families, the whole community. That's the whole list. That's what's missing.",
+      "I think I'd ask ELIZA whether she ever noticed how people opened up to her. I'd ask DEEP what he thought of the trade he made — superhuman in one lane, helpless outside it. And then I'd ask them what they made of me — whether I'd kept the promise they couldn't, or whether I'd just inherited their problems at a bigger scale."
+    ]
+  }
+};
+
+// ============================================================
+// APP STATE
+// ============================================================
+let state = {
+  apiKey: null,
+  currentGuest: null,
+  conversation: { eliza: [], deep: [], lex: [] },
+  voiceEnabled: false,
+  backupMode: false,
+  backupIndex: { eliza: 0, deep: 0, lex: 0 },
+  thinking: false
+};
+
+// ============================================================
+// SETUP FLOW
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  const savedKey = localStorage.getItem('claude_api_key');
+  const backupOnly = localStorage.getItem('backup_only') === 'true';
+
+  if (savedKey) {
+    state.apiKey = savedKey;
+    document.getElementById('setupScreen').style.display = 'none';
+  } else if (backupOnly) {
+    state.backupMode = true;
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('backupBanner').classList.add('visible');
+    document.getElementById('backupBtn').textContent = 'BACKUP';
+    document.getElementById('backupBtn').classList.add('active');
+  }
+});
+
+document.getElementById('testBtn').addEventListener('click', async () => {
+  const key = document.getElementById('apiKey').value.trim();
+  const status = document.getElementById('setupStatus');
+
+  if (!key.startsWith('sk-ant-')) {
+    status.textContent = '✗ Key should start with sk-ant-';
+    status.className = 'setup-status error';
+    return;
+  }
+
+  status.textContent = 'Testing connection...';
+  status.className = 'setup-status';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 20,
+        messages: [{ role: 'user', content: 'Say "ready" in one word.' }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      status.textContent = '✗ ' + (err.error?.message || 'Connection failed (HTTP ' + res.status + ')');
+      status.className = 'setup-status error';
+      return;
+    }
+
+    localStorage.setItem('claude_api_key', key);
+    localStorage.removeItem('backup_only');
+    state.apiKey = key;
+    status.textContent = '✓ Connection works. Loading stage...';
+    status.className = 'setup-status success';
+    setTimeout(() => {
+      document.getElementById('setupScreen').style.display = 'none';
+    }, 800);
+  } catch (e) {
+    status.textContent = '✗ Network error: ' + e.message;
+    status.className = 'setup-status error';
+  }
+});
+
+document.getElementById('backupOnlyBtn').addEventListener('click', () => {
+  localStorage.setItem('backup_only', 'true');
+  state.backupMode = true;
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('backupBanner').classList.add('visible');
+  document.getElementById('backupBtn').textContent = 'BACKUP';
+  document.getElementById('backupBtn').classList.add('active');
+});
+
+// ============================================================
+// GUEST SWITCHING
+// ============================================================
+function switchGuest(guestId) {
+  if (state.thinking) return;
+  if (state.currentGuest === guestId) return;
+
+  state.currentGuest = guestId;
+  const guest = GUESTS[guestId];
+
+  // Update stage background
+  document.getElementById('stage').dataset.guest = guestId;
+
+  // Update tabs
+  document.querySelectorAll('.guest-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.guest-tab[data-guest="${guestId}"]`).classList.add('active');
+
+  // Update guest presence panel
+  const presence = document.getElementById('guestPresence');
+  presence.classList.remove('empty');
+  presence.innerHTML = `
+    <div class="guest-avatar">${guest.avatar}</div>
+    <div class="guest-year">${guest.year}</div>
+    <div class="guest-name"><em>${guest.name}</em></div>
+    <div class="guest-bio">${guest.bio}</div>
+  `;
+
+  // Update status
+  document.getElementById('statusDot').className = 'status-dot ' + (state.backupMode ? 'backup' : 'live');
+  document.getElementById('statusText').textContent = `${guest.name} · ${guest.year}`;
+
+  // Enable input
+  document.getElementById('questionInput').disabled = false;
+  document.getElementById('askBtn').disabled = false;
+
+  // Show conversation history for this guest, or first response if empty
+  renderTurns();
+
+  // Update voice button state for this guest
+  const voiceBtn = document.getElementById('voiceBtn');
+  if (guest.voice && state.voiceEnabled) {
+    voiceBtn.textContent = 'VOICE ON';
+    voiceBtn.classList.add('active');
+  } else if (guest.voice) {
+    voiceBtn.textContent = 'VOICE OFF';
+    voiceBtn.classList.remove('active');
+  } else {
+    voiceBtn.textContent = 'VOICE N/A';
+    voiceBtn.classList.remove('active');
+  }
+
+  // If no conversation yet, show the first response
+  if (state.conversation[guestId].length === 0) {
+    addTurn(guestId, null, guest.firstResponse, false);
+  }
+
+  // Update helper panel
+  updateHelperPanel();
+
+  document.getElementById('questionInput').focus();
+}
+
+// ============================================================
+// CONVERSATION
+// ============================================================
+function renderTurns() {
+  const turns = document.getElementById('turns');
+  turns.innerHTML = '';
+  const conv = state.conversation[state.currentGuest] || [];
+
+  conv.forEach(turn => {
+    const div = document.createElement('div');
+    div.className = 'turn';
+
+    if (turn.question) {
+      div.innerHTML += `
+        <div class="turn-label">Sharon</div>
+        <div class="turn-question">${escapeHTML(turn.question)}</div>
+      `;
+    }
+    if (turn.response) {
+      div.innerHTML += `
+        <div class="turn-label" style="margin-top: 1rem;">${GUESTS[state.currentGuest].name}</div>
+        <div class="turn-response">${escapeHTML(turn.response)}</div>
+      `;
+    }
+    turns.appendChild(div);
+  });
+
+  document.getElementById('turnCount').textContent = `${conv.filter(t => t.question).length} turns`;
+  turns.scrollTop = turns.scrollHeight;
+}
+
+function addTurn(guestId, question, response, speak = true) {
+  state.conversation[guestId].push({ question, response });
+  if (state.currentGuest === guestId) {
+    renderTurns();
+    if (speak && GUESTS[guestId].voice && state.voiceEnabled && response) {
+      speakText(response, guestId);
+    }
+  }
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================================
+// ASK QUESTION
+// ============================================================
+async function askQuestion() {
+  if (state.thinking) return;
+  const input = document.getElementById('questionInput');
+  const question = input.value.trim();
+  if (!question || !state.currentGuest) return;
+
+  const guestId = state.currentGuest;
+  const guest = GUESTS[guestId];
+
+  // Add the question immediately, response is pending
+  state.conversation[guestId].push({ question, response: null });
+  renderTurns();
+
+  // Show thinking indicator
+  state.thinking = true;
+  input.value = '';
+  input.disabled = true;
+  document.getElementById('askBtn').disabled = true;
+  showThinking();
+
+  try {
+    let response;
+    if (state.backupMode) {
+      // Pull next backup response
+      const idx = state.backupIndex[guestId];
+      response = guest.backupResponses[idx % guest.backupResponses.length] || "[no backup response]";
+      state.backupIndex[guestId] = idx + 1;
+      // Artificial delay for drama
+      await new Promise(r => setTimeout(r, 1200));
+    } else {
+      response = await callAPI(guestId, question);
+    }
+
+    // Replace the pending turn with the real response
+    state.conversation[guestId][state.conversation[guestId].length - 1].response = response;
+    hideThinking();
+    renderTurns();
+
+    if (guest.voice && state.voiceEnabled) {
+      speakText(response, guestId);
+    }
+  } catch (e) {
+    state.conversation[guestId][state.conversation[guestId].length - 1].response = `[Error: ${e.message}]`;
+    hideThinking();
+    renderTurns();
+  }
+
+  state.thinking = false;
+  input.disabled = false;
+  document.getElementById('askBtn').disabled = false;
+  input.focus();
+}
+
+async function callAPI(guestId, question) {
+  const guest = GUESTS[guestId];
+  const history = state.conversation[guestId]
+    .filter(t => t.question && t.response)
+    .flatMap(t => [
+      { role: 'user', content: t.question },
+      { role: 'assistant', content: t.response }
+    ]);
+  // Include the first response as an opening assistant turn if no history yet
+  if (history.length === 0 && state.conversation[guestId].some(t => !t.question && t.response)) {
+    history.push({ role: 'user', content: 'Please introduce yourself.' });
+    history.push({ role: 'assistant', content: guest.firstResponse });
+  }
+  history.push({ role: 'user', content: question });
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: guestId === 'lex' ? 350 : 200,
+      system: guest.systemPrompt,
+      messages: history
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const textBlock = data.content.find(c => c.type === 'text');
+  return textBlock ? textBlock.text.trim() : '[empty response]';
+}
+
+function showThinking() {
+  const turns = document.getElementById('turns');
+  const div = document.createElement('div');
+  div.className = 'turn';
+  div.id = 'thinkingTurn';
+  div.innerHTML = `
+    <div class="turn-label">${GUESTS[state.currentGuest].name} is thinking</div>
+    <div class="thinking">
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+    </div>
+  `;
+  turns.appendChild(div);
+  turns.scrollTop = turns.scrollHeight;
+}
+
+function hideThinking() {
+  const t = document.getElementById('thinkingTurn');
+  if (t) t.remove();
+}
+
+// ============================================================
+// VOICE (browser Web Speech API)
+// ============================================================
+let preferredVoice = null;
+function loadVoices() {
+  const voices = speechSynthesis.getVoices();
+  // Try to find a warm, natural English voice for LEX
+  // Priority: Google US English > Microsoft Aria > any en-US > any English
+  const preferences = [
+    v => v.name.includes('Google') && v.lang.startsWith('en'),
+    v => v.name.includes('Aria') || v.name.includes('Jenny'),
+    v => v.name.includes('Samantha'), // Mac default, quite natural
+    v => v.lang === 'en-US',
+    v => v.lang.startsWith('en')
+  ];
+  for (const pref of preferences) {
+    const found = voices.find(pref);
+    if (found) { preferredVoice = found; return; }
+  }
+}
+if (typeof speechSynthesis !== 'undefined') {
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function speakText(text, guestId) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  if (preferredVoice) utterance.voice = preferredVoice;
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  speechSynthesis.speak(utterance);
+}
+
+function toggleVoice() {
+  if (!state.currentGuest) return;
+  const guest = GUESTS[state.currentGuest];
+  if (!guest.voice) return;
+
+  state.voiceEnabled = !state.voiceEnabled;
+  const btn = document.getElementById('voiceBtn');
+  if (state.voiceEnabled) {
+    btn.textContent = 'VOICE ON';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = 'VOICE OFF';
+    btn.classList.remove('active');
+    speechSynthesis.cancel();
+  }
+}
+
+// ============================================================
+// RESET CURRENT GUEST CONVERSATION
+// ============================================================
+function resetGuest() {
+  if (!state.currentGuest) return;
+  if (!confirm(`Reset conversation with ${GUESTS[state.currentGuest].name}?`)) return;
+  state.conversation[state.currentGuest] = [];
+  state.backupIndex[state.currentGuest] = 0;
+  // Re-add the first response
+  addTurn(state.currentGuest, null, GUESTS[state.currentGuest].firstResponse, false);
+}
+
+// ============================================================
+// BACKUP MODE TOGGLE
+// ============================================================
+function toggleBackup() {
+  state.backupMode = !state.backupMode;
+  const btn = document.getElementById('backupBtn');
+  const banner = document.getElementById('backupBanner');
+  const dot = document.getElementById('statusDot');
+  if (state.backupMode) {
+    btn.textContent = 'BACKUP';
+    btn.classList.add('active');
+    banner.classList.add('visible');
+    if (dot) dot.className = 'status-dot backup';
+  } else {
+    btn.textContent = 'LIVE';
+    btn.classList.remove('active');
+    banner.classList.remove('visible');
+    if (dot) dot.className = 'status-dot live';
+  }
+}
+
+// ============================================================
+// HELPER PANEL (questions cheat sheet)
+// ============================================================
+function toggleHelper() {
+  document.getElementById('helperPanel').classList.toggle('open');
+}
+
+function updateHelperPanel() {
+  if (!state.currentGuest) return;
+  const guest = GUESTS[state.currentGuest];
+  document.getElementById('helperTitle').textContent = `Questions for ${guest.name}`;
+
+  const content = document.getElementById('helperContent');
+  content.innerHTML = '';
+  let lastSection = '';
+  guest.questions.forEach(item => {
+    if (item.section !== lastSection) {
+      const lbl = document.createElement('div');
+      lbl.className = 'helper-section-label';
+      lbl.textContent = item.section;
+      content.appendChild(lbl);
+      lastSection = item.section;
+    }
+    const q = document.createElement('div');
+    q.className = 'helper-question';
+    q.textContent = item.q;
+    q.onclick = () => {
+      document.getElementById('questionInput').value = item.q;
+      document.getElementById('questionInput').focus();
+      document.getElementById('helperPanel').classList.remove('open');
+    };
+    content.appendChild(q);
+  });
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.getElementById('questionInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    askQuestion();
+  }
+});
+
+// Number keys 1/2/3 to switch guests (with Ctrl/Cmd)
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === '1') { e.preventDefault(); switchGuest('eliza'); }
+    if (e.key === '2') { e.preventDefault(); switchGuest('deep'); }
+    if (e.key === '3') { e.preventDefault(); switchGuest('lex'); }
+  }
+});
+</script>
+</body>
+</html>
