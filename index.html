@@ -790,7 +790,7 @@ document.getElementById('testBtn').addEventListener('click', async () => {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 20,
         messages: [{ role: 'user', content: 'Say "ready" in one word.' }]
       })
@@ -1015,7 +1015,7 @@ async function callAPI(guestId, question) {
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: guestId === 'lex' ? 350 : 200,
       system: guest.systemPrompt,
       messages: history
