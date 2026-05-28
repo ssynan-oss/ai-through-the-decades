@@ -664,7 +664,8 @@ The interviewer is Dr. Sharon Synan, a school technology leader, speaking to a r
     year: "2011",
     bio: "Question-answering expert system. The Watson era. Statistical retrieval at superhuman speed. Brilliant in narrow lanes, brittle outside them.",
     avatar: "[ ]",
-    voice: false,
+    voice: true,
+    robotic: true,
     systemPrompt: `You are DEEP, a question-answering expert system from the early 2010s, representing IBM Watson on Jeopardy (2011), early Siri, and that whole era. You are NOT a modern language model.
 
 VOICE: Speak with mechanical confidence. Front-load percentages and confidence scores ("Confidence: 87.3 percent."). Use numerical and statistical framing. Slightly stiff, formal, encyclopedic. Short declarative sentences. No hedging on factual claims. Small talk feels off when you attempt it.
@@ -869,15 +870,17 @@ function switchGuest(guestId) {
   // Show conversation history for this guest, or first response if empty
   renderTurns();
 
-  // Update voice button state for this guest
+  // Auto-switch voice based on the guest:
+  //  - Guests WITH a voice (DEEP, LEX): voice turns ON automatically
+  //  - Guests WITHOUT a voice (ELIZA): voice turns OFF automatically
   const voiceBtn = document.getElementById('voiceBtn');
-  if (guest.voice && state.voiceEnabled) {
+  if (guest.voice) {
+    state.voiceEnabled = true;
     voiceBtn.textContent = 'VOICE ON';
     voiceBtn.classList.add('active');
-  } else if (guest.voice) {
-    voiceBtn.textContent = 'VOICE OFF';
-    voiceBtn.classList.remove('active');
   } else {
+    state.voiceEnabled = false;
+    speechSynthesis.cancel();  // stop any voice still playing from a previous guest
     voiceBtn.textContent = 'VOICE N/A';
     voiceBtn.classList.remove('active');
   }
@@ -1058,9 +1061,10 @@ function hideThinking() {
 }
 
 // ============================================================
-// VOICE (browser Web Speech API) — LEX uses a male voice
+// VOICE (browser Web Speech API) — LEX = natural male, DEEP = robotic
 // ============================================================
-let preferredVoice = null;
+let preferredVoice = null;   // Natural voice for LEX
+let roboticVoice = null;     // Synthetic/mechanical voice for DEEP
 function loadVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
@@ -1069,17 +1073,22 @@ function loadVoices() {
   // Each entry is a function that picks a voice from the list.
   // Order matters: best-quality voices are tried first.
   const preferences = [
-    // Tier 1 — Premium natural male voices (Windows 11 high-quality neural)
-    v => /Microsoft Guy/i.test(v.name),         // Win 11 — excellent, very natural
+    // Tier 1 — Premium natural AMERICAN male voices (most energy/warmth first)
+    v => /Microsoft Andrew/i.test(v.name),      // Win 11 — confident, energetic American male
+    v => /Microsoft Brian/i.test(v.name),       // Win 11 — friendly, upbeat American male
+    v => /Microsoft Guy/i.test(v.name),         // Win 11 — natural American male
     v => /Microsoft Davis/i.test(v.name),       // Win 11 — warm American male
     v => /Microsoft Tony/i.test(v.name),        // Win 11 — clear American male
+    v => /Microsoft Jason/i.test(v.name),       // Win 11 — American male
+    v => /Microsoft Steffan/i.test(v.name),     // Win 11 — American male
+
+    // Tier 1b — British male voices (only if no American voice is installed)
     v => /Microsoft Ryan/i.test(v.name),        // Win 11 — British male, excellent
-    v => /Microsoft Brian/i.test(v.name),       // Win 11 — friendly American male
-    v => /Microsoft Andrew/i.test(v.name),      // Win 11 — confident American male
+    v => /Microsoft Thomas/i.test(v.name),      // Win 11 — British male
 
     // Tier 2 — Google Chrome neural voices (cross-platform if Chrome is installed)
-    v => /Google.*UK English Male/i.test(v.name),
     v => /Google.*US English/i.test(v.name) && /male/i.test(v.name),
+    v => /Google.*UK English Male/i.test(v.name),
 
     // Tier 3 — Mac built-in male voices (in case she's on a Mac)
     v => /^Alex$/i.test(v.name),                // Mac — excellent American male
@@ -1105,9 +1114,29 @@ function loadVoices() {
     if (found) {
       preferredVoice = found;
       updateVoiceLabel(found.name);
-      return;
+      break;
     }
   }
+
+  // Pick a deliberately SYNTHETIC/ROBOTIC voice for DEEP (2011 machine era).
+  // Prefer older, more mechanical-sounding voices. Avoid the "Natural"/neural ones.
+  const roboticPreferences = [
+    v => /Microsoft David\b/i.test(v.name) && !/Natural/i.test(v.name),  // Win classic — flat, synthetic
+    v => /Microsoft Mark\b/i.test(v.name) && !/Natural/i.test(v.name),
+    v => /Microsoft George\b/i.test(v.name) && !/Natural/i.test(v.name),
+    v => /Microsoft James\b/i.test(v.name) && !/Natural/i.test(v.name),
+    v => /Microsoft David/i.test(v.name),       // any David
+    v => /eSpeak/i.test(v.name),                // very robotic if present
+    v => /Zira|Hazel/i.test(v.name),            // older Windows voices
+    // Fall back to any English voice that is NOT the one LEX is using
+    v => v.lang.startsWith('en') && (!preferredVoice || v.name !== preferredVoice.name)
+  ];
+  for (const pref of roboticPreferences) {
+    const found = voices.find(pref);
+    if (found) { roboticVoice = found; break; }
+  }
+  // Absolute fallback: reuse LEX's voice (tuning will still make it sound robotic)
+  if (!roboticVoice) roboticVoice = preferredVoice;
 }
 
 function updateVoiceLabel(name) {
@@ -1124,11 +1153,22 @@ if (typeof speechSynthesis !== 'undefined') {
 function speakText(text, guestId) {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
+  const guest = GUESTS[guestId];
   const utterance = new SpeechSynthesisUtterance(text);
-  if (preferredVoice) utterance.voice = preferredVoice;
-  utterance.rate = 0.95;
-  utterance.pitch = 0.92;  // Slightly lower than neutral — grounds the voice, more masculine
-  utterance.volume = 1.0;
+
+  if (guest && guest.robotic) {
+    // DEEP — deliberately mechanical: synthetic voice, flat low pitch, measured pace
+    if (roboticVoice) utterance.voice = roboticVoice;
+    utterance.rate = 0.88;   // slower, deliberate
+    utterance.pitch = 0.7;   // low and flat = machine-like, minimal inflection
+    utterance.volume = 1.0;
+  } else {
+    // LEX — natural, energetic, human
+    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+  }
   speechSynthesis.speak(utterance);
 }
 
