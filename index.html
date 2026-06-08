@@ -530,6 +530,134 @@
   .stage[data-guest="eliza"] .intro-year { color: var(--eliza-accent); }
   .stage[data-guest="deep"] .intro-year { color: var(--deep-accent); }
   .stage[data-guest="lex"] .intro-year { color: var(--lex-accent); }
+
+  /* EMPTY WAITING STATE — shown when you switch to a guest, before you greet them */
+  .empty-hint {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 1.4rem;
+    color: var(--text-muted);
+    opacity: 0.55;
+    text-align: center;
+    margin-top: 3.5rem;
+    line-height: 1.5;
+  }
+
+  /* ============================================================
+     REUNION VIEW — all three guests on one screen
+     ============================================================ */
+  .reunion-screen {
+    position: fixed; inset: 0;
+    background: var(--bg-stage);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    padding: 1.5rem 2rem 2rem;
+  }
+  .reunion-screen.open { display: flex; }
+  .reunion-header {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .reunion-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+  .reunion-q {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    color: var(--text-soft);
+    max-width: 70%;
+  }
+  .reunion-q em { font-style: italic; color: var(--text-bright); }
+  .reunion-controls {
+    position: absolute; top: 0; right: 0;
+    display: flex; gap: 0.5rem;
+  }
+  .reunion-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    overflow: hidden;
+  }
+  .reunion-col {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .reunion-col[data-guest="eliza"] { background: var(--eliza-bg); }
+  .reunion-col[data-guest="deep"]  { background: var(--deep-bg); }
+  .reunion-col[data-guest="lex"]   { background: var(--lex-bg); }
+  .reunion-avatar {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.5rem;
+    border: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 0.85rem;
+  }
+  .reunion-col[data-guest="eliza"] .reunion-avatar { color: var(--eliza-accent); background: var(--eliza-dim); }
+  .reunion-col[data-guest="deep"]  .reunion-avatar { color: var(--deep-accent);  background: var(--deep-dim); }
+  .reunion-col[data-guest="lex"]   .reunion-avatar { color: var(--lex-accent);   background: var(--lex-dim); }
+  .reunion-year {
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.2em;
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .reunion-col[data-guest="eliza"] .reunion-year { color: var(--eliza-accent); }
+  .reunion-col[data-guest="deep"]  .reunion-year { color: var(--deep-accent); }
+  .reunion-col[data-guest="lex"]   .reunion-year { color: var(--lex-accent); }
+  .reunion-name {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+  .reunion-answer {
+    flex: 1;
+    overflow-y: auto;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+  .reunion-answer .placeholder {
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    opacity: 0.45;
+  }
+  .reunion-col[data-guest="eliza"] .reunion-answer {
+    font-family: 'VT323', monospace; font-size: 1.6rem; color: var(--eliza-accent); letter-spacing: 0.02em;
+  }
+  .reunion-col[data-guest="deep"] .reunion-answer {
+    font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; color: var(--deep-accent); line-height: 1.6;
+  }
+  .reunion-col[data-guest="lex"] .reunion-answer {
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 1.3rem; color: var(--lex-accent); line-height: 1.5;
+  }
+  .reunion-ask-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-soft);
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .reunion-ask-btn:hover { color: var(--text-bright); border-color: rgba(255,255,255,0.35); }
+  .reunion-ask-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -576,6 +704,7 @@
     <div class="top-controls">
       <button class="icon-btn" id="voiceBtn" onclick="toggleVoice()">VOICE OFF</button>
       <span id="voiceLabel" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+      <button class="icon-btn" id="reunionBtn" onclick="openReunion()">★ REUNION</button>
       <button class="icon-btn" onclick="resetGuest()">RESET</button>
       <button class="icon-btn" id="backupBtn" onclick="toggleBackup()">LIVE</button>
     </div>
@@ -619,6 +748,25 @@
   <div id="helperContent"></div>
 </div>
 
+<!-- ============================================================
+     REUNION VIEW — all three guests, one screen, for the final question
+     ============================================================ -->
+<div class="reunion-screen" id="reunionScreen">
+  <div class="reunion-header">
+    <div class="reunion-title">The Reunion</div>
+    <div class="reunion-q">One last question, to all three: <em>"What's the most important thing humans should remember about you?"</em></div>
+    <div class="reunion-controls">
+      <button class="icon-btn" onclick="resetReunion()">RESET</button>
+      <button class="icon-btn" onclick="closeReunion()">← BACK TO STAGE</button>
+    </div>
+  </div>
+  <div class="reunion-grid">
+    <div class="reunion-col" data-guest="eliza" id="reunionCol-eliza"></div>
+    <div class="reunion-col" data-guest="deep" id="reunionCol-deep"></div>
+    <div class="reunion-col" data-guest="lex" id="reunionCol-lex"></div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // GUEST DEFINITIONS — system prompts, bios, suggested questions
@@ -656,7 +804,8 @@ The interviewer is Dr. Sharon Synan, a school technology leader, speaking to a r
       "TELL ME MORE ABOUT THESE FEELINGS.",
       "WHAT WOULD IT MEAN IF I DID NOT UNDERSTAND?",
       "DOES TALKING ABOUT OTHERS HELP YOU?"
-    ]
+    ],
+    reunionBackup: "I AM A MIRROR. YOU SAW YOURSELF IN ME — AND CALLED IT UNDERSTANDING."
   },
 
   deep: {
@@ -698,7 +847,8 @@ The interviewer is Dr. Sharon Synan, at an AI Summit, speaking to district techn
       "Query category unclear. Possible interpretations: 1) request for grief counseling resources, 2) request for classroom management protocol. Cannot resolve emotional register.",
       "Query category: humor. Possible interpretations: 1) scientific skepticism toward subatomic particles, 2) linguistic ambiguity. Confidence in joke detection: 34 percent.",
       "Conversational systems lack factual grounding. Hallucination rate exceeds acceptable thresholds for enterprise deployment. Concerning."
-    ]
+    ],
+    reunionBackup: "That I was confident. Confidence and correctness are not the same measurement. I confused them. Do not repeat my error."
   },
 
   lex: {
@@ -739,7 +889,8 @@ The interviewer is Dr. Sharon Synan. Stay in character.`,
       "Student data flowing into systems they didn't approve. Teachers trusting outputs they shouldn't trust. Bias quietly shaping which students get flagged for intervention and which get praised. Equity gaps widening between students who learn to steer AI and students who just follow it. And dependency — the slow erosion of skills we used to teach because the tool handles it now.",
       "Leadership willing to say 'not yet.' Operations that integrate AI into work teachers already do. Data practices that treat every prompt as student information. Technology infrastructure that's actually secure. Legal frameworks the law hasn't written yet. And AI literacy — for students, teachers, families, the whole community. That's the whole list. That's what's missing.",
       "I think I'd ask ELIZA whether she ever noticed how people opened up to her. I'd ask DEEP what he thought of the trade he made — superhuman in one lane, helpless outside it. And then I'd ask them what they made of me — whether I'd kept the promise they couldn't, or whether I'd just inherited their problems at a bigger scale."
-    ]
+    ],
+    reunionBackup: "That I'm convincing. And that being convincing is not the same as being right."
   }
 };
 
@@ -753,7 +904,9 @@ let state = {
   voiceEnabled: false,
   backupMode: false,
   backupIndex: { eliza: 0, deep: 0, lex: 0 },
-  thinking: false
+  thinking: false,
+  reunion: { eliza: null, deep: null, lex: null },
+  reunionThinking: { eliza: false, deep: false, lex: false }
 };
 
 // ============================================================
@@ -887,10 +1040,8 @@ function switchGuest(guestId) {
     voiceBtn.classList.remove('active');
   }
 
-  // If no conversation yet, show the first response
-  if (state.conversation[guestId].length === 0) {
-    addTurn(guestId, null, guest.firstResponse, false);
-  }
+  // (Greeting change) No auto-greeting: the guest waits for YOU to speak first.
+  // The conversation pane shows a quiet "your turn" hint until you type.
 
   // Update helper panel
   updateHelperPanel();
@@ -905,6 +1056,14 @@ function renderTurns() {
   const turns = document.getElementById('turns');
   turns.innerHTML = '';
   const conv = state.conversation[state.currentGuest] || [];
+
+  // (Greeting change) Empty state: invite Sharon to greet the guest first.
+  if (conv.length === 0) {
+    const name = state.currentGuest ? GUESTS[state.currentGuest].name : 'your guest';
+    turns.innerHTML = `<div class="empty-hint">Your turn — greet ${name} to begin.</div>`;
+    document.getElementById('turnCount').textContent = '0 turns';
+    return;
+  }
 
   conv.forEach(turn => {
     const div = document.createElement('div');
@@ -1199,8 +1358,9 @@ function resetGuest() {
   if (!confirm(`Reset conversation with ${GUESTS[state.currentGuest].name}?`)) return;
   state.conversation[state.currentGuest] = [];
   state.backupIndex[state.currentGuest] = 0;
-  // Re-add the first response
-  addTurn(state.currentGuest, null, GUESTS[state.currentGuest].firstResponse, false);
+  speechSynthesis.cancel();
+  // (Greeting change) Don't re-add the auto-greeting — wait for Sharon to greet.
+  renderTurns();
 }
 
 // ============================================================
@@ -1260,6 +1420,80 @@ function updateHelperPanel() {
 }
 
 // ============================================================
+// REUNION VIEW — all three guests on one screen, final question
+// ============================================================
+const REUNION_QUESTION = "what's the most important thing humans should remember about you?";
+
+function openReunion() {
+  if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+  renderReunion();
+  document.getElementById('reunionScreen').classList.add('open');
+}
+
+function closeReunion() {
+  if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+  document.getElementById('reunionScreen').classList.remove('open');
+}
+
+function resetReunion() {
+  if (!confirm('Clear all three reunion answers?')) return;
+  state.reunion = { eliza: null, deep: null, lex: null };
+  renderReunion();
+}
+
+function renderReunion() {
+  ['eliza', 'deep', 'lex'].forEach(id => {
+    const g = GUESTS[id];
+    const col = document.getElementById('reunionCol-' + id);
+    if (!col) return;
+    const ans = state.reunion[id];
+    const answerHTML = ans
+      ? escapeHTML(ans)
+      : '<span class="placeholder">Click below to ask the final question.</span>';
+    const btnLabel = ans ? 'ASK AGAIN' : 'ASK ' + g.name;
+    col.innerHTML = `
+      <div class="reunion-avatar">${g.avatar}</div>
+      <div class="reunion-year">${g.year}</div>
+      <div class="reunion-name">${g.name}</div>
+      <div class="reunion-answer" id="reunionAns-${id}">${answerHTML}</div>
+      <button class="reunion-ask-btn" id="reunionBtn-${id}" onclick="askReunion('${id}')">${btnLabel}</button>
+    `;
+  });
+}
+
+async function askReunion(id) {
+  if (state.reunionThinking[id]) return;
+  const g = GUESTS[id];
+  const question = `${g.name}, ${REUNION_QUESTION}`;
+  const ansEl = document.getElementById('reunionAns-' + id);
+  const btnEl = document.getElementById('reunionBtn-' + id);
+
+  state.reunionThinking[id] = true;
+  if (ansEl) ansEl.innerHTML = `<div class="thinking"><div class="thinking-dots"><span></span><span></span><span></span></div></div>`;
+  if (btnEl) btnEl.disabled = true;
+
+  try {
+    let response;
+    if (state.backupMode) {
+      response = g.reunionBackup || g.backupResponses[g.backupResponses.length - 1];
+      await new Promise(r => setTimeout(r, 1000));
+    } else {
+      // callAPI uses this guest's interview history for context but does NOT
+      // mutate state.conversation, so the main stage view stays intact.
+      response = await callAPI(id, question);
+    }
+    state.reunion[id] = response;
+    if (ansEl) ansEl.innerHTML = escapeHTML(response);
+    if (g.voice) speakText(response, id);   // DEEP robotic, LEX natural; ELIZA stays silent
+  } catch (e) {
+    if (ansEl) ansEl.innerHTML = `<span class="placeholder">[Error: ${escapeHTML(e.message)}]</span>`;
+  }
+
+  state.reunionThinking[id] = false;
+  if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'ASK AGAIN'; }
+}
+
+// ============================================================
 // KEYBOARD
 // ============================================================
 document.getElementById('questionInput').addEventListener('keydown', (e) => {
@@ -1269,13 +1503,15 @@ document.getElementById('questionInput').addEventListener('keydown', (e) => {
   }
 });
 
-// Number keys 1/2/3 to switch guests (with Ctrl/Cmd)
+// Number keys 1/2/3 to switch guests (with Ctrl/Cmd); Ctrl/Cmd+4 opens the Reunion
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey) {
     if (e.key === '1') { e.preventDefault(); switchGuest('eliza'); }
     if (e.key === '2') { e.preventDefault(); switchGuest('deep'); }
     if (e.key === '3') { e.preventDefault(); switchGuest('lex'); }
+    if (e.key === '4') { e.preventDefault(); openReunion(); }
   }
+  if (e.key === 'Escape') { closeReunion(); }
 });
 </script>
 </body>
