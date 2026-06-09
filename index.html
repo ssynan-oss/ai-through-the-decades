@@ -439,6 +439,27 @@
     margin-bottom: 1.5rem;
     color: var(--gold);
   }
+  .helper-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .helper-panel-header h2 { margin-bottom: 0; }
+  .helper-close {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-soft);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .helper-close:hover { color: var(--text-bright); border-color: rgba(255,255,255,0.4); }
   .helper-question {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
@@ -744,7 +765,10 @@
 <!-- HELPER PANEL (questions cheat sheet) -->
 <button class="helper-toggle" onclick="toggleHelper()">QUESTIONS</button>
 <div class="helper-panel" id="helperPanel">
-  <h2 id="helperTitle">Interview Questions</h2>
+  <div class="helper-panel-header">
+    <h2 id="helperTitle">Interview Questions</h2>
+    <button class="helper-close" onclick="closeHelper()" aria-label="Close questions">×</button>
+  </div>
   <div id="helperContent"></div>
 </div>
 
@@ -1391,6 +1415,10 @@ function toggleHelper() {
   document.getElementById('helperPanel').classList.toggle('open');
 }
 
+function closeHelper() {
+  document.getElementById('helperPanel').classList.remove('open');
+}
+
 function updateHelperPanel() {
   if (!state.currentGuest) return;
   const guest = GUESTS[state.currentGuest];
@@ -1511,7 +1539,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === '3') { e.preventDefault(); switchGuest('lex'); }
     if (e.key === '4') { e.preventDefault(); openReunion(); }
   }
-  if (e.key === 'Escape') { closeReunion(); }
+  if (e.key === 'Escape') { closeReunion(); closeHelper(); }
 });
 </script>
 </body>
