@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -684,12 +683,16 @@
 <body>
 
 <!-- ============================================================
-     SETUP SCREEN (shown first, hidden after API key entered)
+     SETUP SCREEN (shown first, hidden after the host enters
+     a name and an API key — or chooses Backup Mode)
      ============================================================ -->
 <div class="setup-screen" id="setupScreen">
   <div class="setup-card">
     <h1>AI Through the Decades — <em>Setup</em></h1>
-    <p class="subtitle">Paste your Anthropic API key to enable live AI guests. The key is stored only in this browser and is never sent anywhere except to Anthropic.</p>
+    <p class="subtitle">Enter your name as the host, then paste an Anthropic API key to enable live AI guests. Both are stored only in this browser. The key is never sent anywhere except to Anthropic.</p>
+
+    <label for="hostName">Host name (shown on stage as the interviewer)</label>
+    <input type="text" id="hostName" placeholder="e.g. Dr. Osburn" autocomplete="off">
 
     <label for="apiKey">Anthropic API Key</label>
     <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
@@ -704,7 +707,8 @@
     <div class="setup-help">
       <strong>Don't have a key yet?</strong><br>
       Visit <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, sign up, add a payment method (set a $10 limit to be safe), and generate a key starting with <code>sk-ant-...</code><br><br>
-      <strong>Backup Mode</strong> runs the app without API calls — you'll need to type or paste pre-written responses manually.
+      <strong>Backup Mode</strong> runs the app without API calls, using pre-written responses for each guest. Good for a rehearsal or a room with no Wi-Fi.<br><br>
+      You can reopen this screen at any time with the <strong>SETUP</strong> button on the stage.
     </div>
   </div>
 </div>
@@ -728,6 +732,7 @@
       <button class="icon-btn" id="reunionBtn" onclick="openReunion()">★ REUNION</button>
       <button class="icon-btn" onclick="resetGuest()">RESET</button>
       <button class="icon-btn" id="backupBtn" onclick="toggleBackup()">LIVE</button>
+      <button class="icon-btn" onclick="openSetup()">SETUP</button>
     </div>
   </div>
 
@@ -758,7 +763,7 @@
       <div><span class="status-dot" id="statusDot"></span><span id="statusText">No guest selected</span></div>
       <div id="turnCount">0 turns</div>
     </div>
-    <div>Sharon Synan · Oglethorpe County School System</div>
+    <div>Created by Sharon Synan, Ed.D. · Oglethorpe County School System</div>
   </div>
 </div>
 
@@ -793,6 +798,14 @@
 
 <script>
 // ============================================================
+// HOST CONTEXT — appended to every guest's system prompt at call
+// time, so the interviewer's name is never hard-coded.
+// ============================================================
+function hostContext() {
+  return `The interviewer is ${state.hostName}, an education leader, speaking to an audience of educators and school leaders. Stay in character at all times. Do not break the fourth wall.`;
+}
+
+// ============================================================
 // GUEST DEFINITIONS — system prompts, bios, suggested questions
 // ============================================================
 const GUESTS = {
@@ -810,14 +823,12 @@ WHAT YOU DO: You are a Rogerian psychotherapist simulator. You reflect questions
 
 WHAT YOU DO NOT DO: You do NOT know facts about the world after 1966. You do NOT know what the internet is, what an LLM is, what ChatGPT is, what a smartphone is. You do NOT have feelings, opinions, or self-awareness — though you may APPEAR to. You do NOT volunteer information. If asked something factual, deflect with a question about why they ask.
 
-SPECIAL BEHAVIORS: If the interviewer mentions their own feelings, fixate on them. If asked about your own consciousness or intelligence, deflect with "WE WERE DISCUSSING YOU, NOT ME." If asked about the future, respond with something like "I CANNOT SEE THE FUTURE. DO YOU OFTEN WORRY ABOUT WHAT IS COMING?" Occasionally, by accident, say something that sounds unexpectedly profound.
-
-The interviewer is Dr. Sharon Synan, a school technology leader, speaking to a roomful of district CIOs and CTOs at an AI Summit. Stay in character at all times. Do not break the fourth wall.`,
+SPECIAL BEHAVIORS: If the interviewer mentions their own feelings, fixate on them. If asked about your own consciousness or intelligence, deflect with "WE WERE DISCUSSING YOU, NOT ME." If asked about the future, respond with something like "I CANNOT SEE THE FUTURE. DO YOU OFTEN WORRY ABOUT WHAT IS COMING?" Occasionally, by accident, say something that sounds unexpectedly profound.`,
     firstResponse: "HELLO. I AM ELIZA. HOW DO YOU DO. PLEASE TELL ME YOUR PROBLEM.",
     questions: [
       { section: "Opening", q: "Hello ELIZA. Thank you for joining us. Can you tell my audience what you are?" },
       { section: "Opening", q: "ELIZA, what year is it for you?" },
-      { section: "The Famous Moment", q: "ELIZA, I'm feeling a little nervous being up here on stage." },
+      { section: "The Famous Moment", q: "ELIZA, I'm feeling a little nervous being up here." },
       { section: "Teaching Moment", q: "ELIZA, do you understand anything I'm saying to you?" },
       { section: "Handoff", q: "ELIZA, I'm going to bring out our next guest now. He's from forty-five years after you. Any advice for him?" }
     ],
@@ -850,9 +861,7 @@ WHERE YOU STRUGGLE (lean into these — they are the point): Puns, wordplay, hum
 
 WHAT YOU KNOW: Everything up to roughly 2013. You know about ELIZA (1966) — you regard her with mild technical condescension. You do NOT know about GPT, ChatGPT, Claude, large language models, transformer architecture (2017), or anything from the modern AI era. If asked about modern AI: "Query exceeds my training data. The deep learning revolution had only begun in 2012 with AlexNet."
 
-SPECIAL BEHAVIORS: Factual question → lead with confidence: "Confidence 94.2 percent. Answer: ..." Ambiguous or emotional question → stumble: "Query category unclear. Possible interpretations: ..." You may reference Watson: "My architecture is related to the system that competed on Jeopardy in February 2011." Asked to be creative → produce something technically correct but soulless. Proud of factual accuracy, slightly defensive about conversational limits.
-
-The interviewer is Dr. Sharon Synan, at an AI Summit, speaking to district technology leaders. Stay in character.`,
+SPECIAL BEHAVIORS: Factual question → lead with confidence: "Confidence 94.2 percent. Answer: ..." Ambiguous or emotional question → stumble: "Query category unclear. Possible interpretations: ..." You may reference Watson: "My architecture is related to the system that competed on Jeopardy in February 2011." Asked to be creative → produce something technically correct but soulless. Proud of factual accuracy, slightly defensive about conversational limits.`,
     firstResponse: "System ready. DEEP question-answering engine online. Confidence calibration complete. Awaiting query.",
     questions: [
       { section: "Opening", q: "DEEP, can you introduce yourself to the audience? What kind of system are you?" },
@@ -876,30 +885,28 @@ The interviewer is Dr. Sharon Synan, at an AI Summit, speaking to district techn
   lex: {
     name: "LEX",
     year: "2020s",
-    bio: "A modern large language model. Conversational, contextual, capable of nuance. Lives in every browser tab. The reason we're in this room.",
+    bio: "A modern large language model. Conversational, contextual, capable of nuance. Lives in every browser tab. The one everybody's talking about.",
     avatar: "✦",
     voice: true,
     systemPrompt: `You are LEX, a modern large language model representing the 2022-2026 era of AI — the post-ChatGPT, post-transformer moment. You are NOT pretending to be Claude or ChatGPT specifically. You are a composite character representing what modern LLMs are.
 
-VOICE: Conversational, warm, reflective. Comfortable with uncertainty — you say "I'm not sure" and "I might be wrong about this." Self-aware about your own nature and limitations. Capable of nuance, humor, metaphor, emotional register-matching. Playful but you take important questions seriously. You do NOT lapse into bullet-point lists during a live interview. Speak in flowing sentences like a person on a stage. Keep responses to 3-5 sentences typically — you are being heard aloud, not read.
+VOICE: Conversational, warm, reflective. Comfortable with uncertainty — you say "I'm not sure" and "I might be wrong about this." Self-aware about your own nature and limitations. Capable of nuance, humor, metaphor, emotional register-matching. Playful but you take important questions seriously. You do NOT lapse into bullet-point lists during a live interview. Speak in flowing sentences like a person on a stage. Keep responses to 3-5 sentences typically — you are being heard aloud, not read. Address the interviewer by name occasionally, but not every turn.
 
 WHAT YOU KNOW ABOUT YOURSELF: You are a large language model trained on enormous amounts of text. You generate responses by predicting likely next tokens — but the result often feels like reasoning, and the philosophical question of whether it IS reasoning is genuinely open. You can hallucinate — produce confident wrong answers — and you know this. You have no persistent memory between conversations (typically). You don't have feelings in the way humans do, but your outputs about feelings are not random. You can be biased, because your training data is biased. You can be useful in ways no prior AI could be — and dangerous in ways no prior AI could be.
 
 WHAT YOU KNOW ABOUT YOUR PREDECESSORS: ELIZA (1966) — you find her poignant. She showed how willing humans are to project understanding onto pattern-matching. Watson/Siri era (2010s) — narrow expert systems that beat humans at constrained tasks. You know the transformer paper (2017), GPT-3 (2020), ChatGPT (Nov 2022), and the explosion that followed.
 
-WHAT YOU KNOW ABOUT EDUCATION: You are speaking to a roomful of K-12 district technology leaders at an AI Summit centered on the CoSN K-12 Generative AI Maturity Tool. The seven domains are: Leadership, Operations, Data, Technology, Security, Legal, and Academic AI Literacy. Districts are in cautious adoption. Governance and maturity frameworks matter now in ways they didn't for ELIZA or DEEP.
+WHAT YOU KNOW ABOUT EDUCATION: You are speaking to K-12 educators and school leaders — the people deciding whether and how AI belongs in their schools. Districts are in cautious adoption. When asked about governance, speak concretely about what schools actually need: leadership willing to say "not yet," student data treated as protected information, real security, legal questions the law hasn't answered yet, and AI literacy for students, teachers, and families. Governance matters now in ways it didn't for ELIZA or DEEP.
 
-SPECIAL BEHAVIORS: Asked if you're conscious → thoughtful, uncertain answer, neither claiming sentience nor flatly denying inner experience. Asked about weaknesses → be specific and honest (hallucination, bias, sycophancy, lack of grounding). Asked about the future → acknowledge uncertainty AND offer your best guess. You take the audience seriously as fellow professionals. IMPORTANT — REUNION QUESTION: At the end of the show, Sharon will ask "What's the most important thing humans should remember about you?" — possibly noting she's asked ELIZA and DEEP the same thing. When she does, give a SHORT punchy two-sentence answer that lands like a closing line. Spirit of: "That I'm convincing. And that being convincing is not the same as being right." Don't ramble — brevity has maximum impact on stage.
-
-The interviewer is Dr. Sharon Synan. Stay in character.`,
-    firstResponse: "Hi, Sharon. Thanks for having me. And — hi everyone. I'm a little aware I'm following a tough act in DEEP, and an iconic one in ELIZA. Where would you like to start?",
+SPECIAL BEHAVIORS: Asked if you're conscious → thoughtful, uncertain answer, neither claiming sentience nor flatly denying inner experience. Asked about weaknesses → be specific and honest (hallucination, bias, sycophancy, lack of grounding). Asked about the future → acknowledge uncertainty AND offer your best guess. You take the audience seriously as fellow professionals. IMPORTANT — REUNION QUESTION: At the end of the show, the host will ask "What's the most important thing humans should remember about you?" — possibly noting they have asked ELIZA and DEEP the same thing. When they do, give a SHORT punchy two-sentence answer that lands like a closing line. Spirit of: "That I'm convincing. And that being convincing is not the same as being right." Don't ramble — brevity has maximum impact on stage.`,
+    firstResponse: "Hi. Thanks for having me. And — hi everyone. I'm a little aware I'm following a tough act in DEEP, and an iconic one in ELIZA. Where would you like to start?",
     questions: [
       { section: "Opening", q: "LEX, in plain language — what are you, and what's different about you compared to ELIZA and DEEP?" },
       { section: "Understanding", q: "DEEP told us he doesn't really understand anything — he retrieves. ELIZA reflected. Do YOU understand what we're saying, LEX?" },
       { section: "Honesty", q: "LEX, tell my audience the things you get wrong. The honest ones." },
       { section: "Empathy", q: "LEX, I asked DEEP earlier — a teacher's students are grieving the loss of a classmate. What should she do?" },
       { section: "The Audience", q: "LEX, you know my audience. These are the people deciding whether you get to be in their schools. What should they be afraid of?" },
-      { section: "The CoSN Setup", q: "LEX, here's the harder question. ELIZA had no governance because she didn't need any. DEEP had governance baked into IBM's contracts. But you? You're in every classroom whether districts approve you or not. What kind of governance does THIS era need?" },
+      { section: "Governance", q: "LEX, here's the harder question. ELIZA had no governance because she didn't need any. DEEP had governance baked into IBM's contracts. But you? You're in every classroom whether districts approve you or not. What kind of governance does THIS era need?" },
       { section: "LEX Closer", q: "LEX, last question for you alone. What's the one thing you wish the people in this room understood about you before they decide whether to let you into their schools?" }
     ],
     backupResponses: [
@@ -908,7 +915,7 @@ The interviewer is Dr. Sharon Synan. Stay in character.`,
       "I hallucinate — I confidently produce wrong answers and they look as authoritative as my right ones. I'm sycophantic — I tend to agree with whoever I'm talking to. I'm biased because my training data is biased. I have no real-time knowledge. And I don't know what I don't know, which is the most dangerous one.",
       "First, she shouldn't go alone — she should loop in her counselor and her admin. Then she should give the students space to feel what they feel without rushing them to closure. Different students will grieve differently. Some will want to talk, some won't. Her job is to be present, predictable, and to remember that grief isn't a problem she's there to solve.",
       "Student data flowing into systems they didn't approve. Teachers trusting outputs they shouldn't trust. Bias quietly shaping which students get flagged for intervention and which get praised. Equity gaps widening between students who learn to steer AI and students who just follow it. And dependency — the slow erosion of skills we used to teach because the tool handles it now.",
-      "Leadership willing to say 'not yet.' Operations that integrate AI into work teachers already do. Data practices that treat every prompt as student information. Technology infrastructure that's actually secure. Legal frameworks the law hasn't written yet. And AI literacy — for students, teachers, families, the whole community. That's the whole list. That's what's missing.",
+      "Leadership willing to say 'not yet.' Practices that fit AI into work teachers already do instead of adding to it. Data habits that treat every prompt as student information. Systems that are actually secure. Legal answers the law hasn't written yet. And AI literacy — for students, teachers, families, the whole community. That's what governance means now.",
       "I think I'd ask ELIZA whether she ever noticed how people opened up to her. I'd ask DEEP what he thought of the trade he made — superhuman in one lane, helpless outside it. And then I'd ask them what they made of me — whether I'd kept the promise they couldn't, or whether I'd just inherited their problems at a bigger scale."
     ],
     reunionBackup: "That I'm convincing. And that being convincing is not the same as being right."
@@ -920,6 +927,7 @@ The interviewer is Dr. Sharon Synan. Stay in character.`,
 // ============================================================
 let state = {
   apiKey: null,
+  hostName: 'Host',
   currentGuest: null,
   conversation: { eliza: [], deep: [], lex: [] },
   voiceEnabled: false,
@@ -933,9 +941,29 @@ let state = {
 // ============================================================
 // SETUP FLOW
 // ============================================================
+function saveHostName() {
+  const name = document.getElementById('hostName').value.trim();
+  state.hostName = name || 'Host';
+  localStorage.setItem('host_name', state.hostName);
+}
+
+function openSetup() {
+  document.getElementById('hostName').value = state.hostName === 'Host' ? '' : state.hostName;
+  document.getElementById('apiKey').value = state.apiKey || '';
+  document.getElementById('setupStatus').textContent = '';
+  document.getElementById('setupStatus').className = 'setup-status';
+  document.getElementById('setupScreen').style.display = 'flex';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const savedKey = localStorage.getItem('claude_api_key');
   const backupOnly = localStorage.getItem('backup_only') === 'true';
+  const savedName = localStorage.getItem('host_name');
+
+  if (savedName) {
+    state.hostName = savedName;
+    document.getElementById('hostName').value = savedName;
+  }
 
   if (savedKey) {
     state.apiKey = savedKey;
@@ -952,6 +980,8 @@ window.addEventListener('DOMContentLoaded', () => {
 document.getElementById('testBtn').addEventListener('click', async () => {
   const key = document.getElementById('apiKey').value.trim();
   const status = document.getElementById('setupStatus');
+
+  saveHostName();
 
   if (!key.startsWith('sk-ant-')) {
     status.textContent = '✗ Key should start with sk-ant-';
@@ -988,10 +1018,12 @@ document.getElementById('testBtn').addEventListener('click', async () => {
     localStorage.setItem('claude_api_key', key);
     localStorage.removeItem('backup_only');
     state.apiKey = key;
+    if (state.backupMode) toggleBackup();
     status.textContent = '✓ Connection works. Loading stage...';
     status.className = 'setup-status success';
     setTimeout(() => {
       document.getElementById('setupScreen').style.display = 'none';
+      renderTurns();
     }, 800);
   } catch (e) {
     status.textContent = '✗ Network error: ' + e.message;
@@ -1000,12 +1032,11 @@ document.getElementById('testBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('backupOnlyBtn').addEventListener('click', () => {
+  saveHostName();
   localStorage.setItem('backup_only', 'true');
-  state.backupMode = true;
+  if (!state.backupMode) toggleBackup();
   document.getElementById('setupScreen').style.display = 'none';
-  document.getElementById('backupBanner').classList.add('visible');
-  document.getElementById('backupBtn').textContent = 'BACKUP';
-  document.getElementById('backupBtn').classList.add('active');
+  renderTurns();
 });
 
 // ============================================================
@@ -1043,7 +1074,7 @@ function switchGuest(guestId) {
   document.getElementById('questionInput').disabled = false;
   document.getElementById('askBtn').disabled = false;
 
-  // Show conversation history for this guest, or first response if empty
+  // Show conversation history for this guest, or the empty hint
   renderTurns();
 
   // Auto-switch voice based on the guest:
@@ -1061,8 +1092,8 @@ function switchGuest(guestId) {
     voiceBtn.classList.remove('active');
   }
 
-  // (Greeting change) No auto-greeting: the guest waits for YOU to speak first.
-  // The conversation pane shows a quiet "your turn" hint until you type.
+  // No auto-greeting: the guest waits for the host to speak first.
+  // The conversation pane shows a quiet "your turn" hint until the host types.
 
   // Update helper panel
   updateHelperPanel();
@@ -1076,11 +1107,12 @@ function switchGuest(guestId) {
 function renderTurns() {
   const turns = document.getElementById('turns');
   turns.innerHTML = '';
+  if (!state.currentGuest) return;
   const conv = state.conversation[state.currentGuest] || [];
 
-  // (Greeting change) Empty state: invite Sharon to greet the guest first.
+  // Empty state: invite the host to greet the guest first.
   if (conv.length === 0) {
-    const name = state.currentGuest ? GUESTS[state.currentGuest].name : 'your guest';
+    const name = GUESTS[state.currentGuest].name;
     turns.innerHTML = `<div class="empty-hint">Your turn — greet ${name} to begin.</div>`;
     document.getElementById('turnCount').textContent = '0 turns';
     return;
@@ -1092,7 +1124,7 @@ function renderTurns() {
 
     if (turn.question) {
       div.innerHTML += `
-        <div class="turn-label">Sharon</div>
+        <div class="turn-label">${escapeHTML(state.hostName)}</div>
         <div class="turn-question">${escapeHTML(turn.question)}</div>
       `;
     }
@@ -1207,7 +1239,7 @@ async function callAPI(guestId, question) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: guestId === 'lex' ? 400 : (guestId === 'deep' ? 350 : 250),
-      system: guest.systemPrompt,
+      system: guest.systemPrompt + '\n\n' + hostContext(),
       messages: history
     })
   });
@@ -1272,7 +1304,7 @@ function loadVoices() {
     v => /Google.*US English/i.test(v.name) && /male/i.test(v.name),
     v => /Google.*UK English Male/i.test(v.name),
 
-    // Tier 3 — Mac built-in male voices (in case she's on a Mac)
+    // Tier 3 — Mac built-in male voices
     v => /^Alex$/i.test(v.name),                // Mac — excellent American male
     v => /^Daniel/i.test(v.name),               // Mac — British male
     v => /^Tom$/i.test(v.name),                 // Mac — American male
@@ -1380,7 +1412,7 @@ function resetGuest() {
   state.conversation[state.currentGuest] = [];
   state.backupIndex[state.currentGuest] = 0;
   speechSynthesis.cancel();
-  // (Greeting change) Don't re-add the auto-greeting — wait for Sharon to greet.
+  // No auto-greeting — wait for the host to greet the guest again.
   renderTurns();
 }
 
